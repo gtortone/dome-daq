@@ -14,21 +14,31 @@ extern "C" {
 
 //#define DEBUG
 //#define DEBUG_MORE
+//#define DEBUG_RC
 
 /* USB - begin */ 
 
 #define USB_VENDOR_ID   0x04B4
 #define USB_PRODUCT_ID  0x8613
-#define EP_DAQRD     	(LIBUSB_ENDPOINT_IN  | 8)
+#define EP_DAQRD     	(0x08 | LIBUSB_ENDPOINT_IN)
+#define EP_RCWR		(0x02 | LIBUSB_ENDPOINT_OUT)
+#define EP_RCRD		(0x06 | LIBUSB_ENDPOINT_IN)
 #define USB_TIMEOUT     3000
 #define LEN_IN_BUFFER	1024*8
+
+#define OPC_WR		0x01
+#define OPC_RD		0x02
+#define OPC_ERR		0xF
 
 struct libusb_device_handle *devh = NULL;
 uint8_t in_buffer[LEN_IN_BUFFER];
 
 struct libusb_transfer *transfer_daq_in = NULL;
+struct libusb_transfer *transfer_rc_in = NULL;
+struct libusb_transfer *transfer_rc_out = NULL;
 libusb_context *ctx = NULL;
 
+bool rc_transfer = false;
 bool cancel_done = false;
 bool running = false;
 bool paused = false;
@@ -59,13 +69,14 @@ INT max_event_size_frag = 5 * 1024 * 1024;
 INT max_event_size = 16000;
 
 /* ring buffer size to hold events */
-INT event_buffer_size = 16000000;	// 16 Megabytes
+INT event_buffer_size = 1600000;	// 1.6 Megabytes
 
 /* ring buffer handler for events */
 int rb_handle;
 
 /* tid for usb thread */
 pthread_t tid;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define SOE	0xBAAB
 #define EOE	0xFEEF
@@ -83,14 +94,17 @@ INT frontend_loop();
 INT interrupt_configure(INT cmd, INT source, POINTER_T adr);
 INT poll_event(INT source, INT count, BOOL test);
 INT read_event(char *pevent, INT off);
+INT read_runcontrol(char *pevent, INT off);
 
 void *usb_events_thread(void *);
+bool usb_rc_regread(uint16_t addr, uint16_t &value);
+bool usb_rc_regwrite(uint16_t addr, uint16_t value);
 
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
 
-   {"Dome%04d-ev",                   /* equipment name */
+   {"Dome%04d-ev",           /* equipment name */
     {1, 0,                   /* event ID, trigger mask */
      "SYSTEM",               /* event buffer */
      EQ_POLLED,              /* equipment type */
@@ -98,14 +112,28 @@ EQUIPMENT equipment[] = {
      "MIDAS",                /* format */
      TRUE,                   /* enabled */
      RO_RUNNING,	     /* readout on running */
-     500,                    /* poll for 500ms */
+     500,                    /* poll every period (ms) */
      0,                      /* stop run after this event limit */
      0,                      /* number of sub events */
      0,                      /* log history */
      "", "", "",},
     read_event,          /* readout routine */
     },
-
+   {"Dome%04d-rc",           /* equipment name */
+    {2, 0,                   /* event ID, trigger mask */
+     "SYSTEM",               /* event buffer */
+     EQ_PERIODIC,            /* equipment type */
+     0,                      /* event source (not used) */
+     "MIDAS",                /* format */
+     TRUE,                   /* enabled */
+     RO_ALWAYS,              /* readout always */
+     1000,                   /* poll every period (ms) */
+     0,                      /* stop run after this event limit */
+     0,                      /* number of sub events */
+     0,                      /* log history */
+     "", "", "",},
+    read_runcontrol,         /* readout routine */
+    },
    {""}
 };
 
@@ -115,7 +143,7 @@ EQUIPMENT equipment[] = {
 
 /* USB callback ----------------------------------------------------*/
 
-void cb_in(struct libusb_transfer *transfer)
+void cb_daq_in(struct libusb_transfer *transfer)
 {
    void *wp;
    int nb;
@@ -166,11 +194,13 @@ void *usb_events_thread(void *arg)
 {
    static struct timeval tv;
    tv.tv_sec = 0;
-   tv.tv_usec = 0;
-   //tv.tv_usec = 200 * 1000;     // 200 msec
+   tv.tv_usec = 500000;		// 500 msec
 
-   while(running)
-      libusb_handle_events_timeout_completed(ctx, &tv, NULL);
+   while(running) {
+      pthread_mutex_lock(&mutex);
+        libusb_handle_events_timeout_completed(ctx, &tv, NULL);
+      pthread_mutex_unlock(&mutex);
+   }
 
    return NULL;
 }
@@ -231,8 +261,11 @@ INT frontend_init()
       return(FE_ERR_HW);
    } 
 
-   transfer_daq_in  = libusb_alloc_transfer(0);
-   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_in, NULL, USB_TIMEOUT);
+   transfer_daq_in = libusb_alloc_transfer(0);
+   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, NULL, USB_TIMEOUT);
+
+   transfer_rc_in = libusb_alloc_transfer(0);
+   transfer_rc_out = libusb_alloc_transfer(0);
 
    cm_msg(MINFO,"dfe","Dome FE initialized");
 
@@ -276,7 +309,6 @@ INT end_of_run(INT run_number, char *error)
    static struct timeval tv;
    tv.tv_usec = 0;
    tv.tv_sec = 0;
-   //tv.tv_usec = 200 * 1000;	// 200 msec
 
    running = false;
    
@@ -486,4 +518,142 @@ INT read_event(char *pevent, INT off) {
          return bk_size(pevent);
       }
    }	// end loop
+}
+
+INT read_runcontrol(char *pevent, INT off) {
+
+   uint16_t value;
+   bool r;
+
+   for(int a=0; a<40; a++) {
+      r = usb_rc_regread(a, value);
+      printf("%d) RC retval = %d - value = %X\n", a, r, value);
+   }
+
+   return 0;
+}
+
+
+/* --- USB Run Control functions ---------------------------------- */
+
+bool usb_rc_regread(uint16_t addr, uint16_t &value) {
+
+   uint16_t pkt_wr[2];
+   uint8_t *buf_wr;
+   uint8_t buf_rd[4];
+   uint16_t *pkt_rd;
+
+   uint8_t seq;
+   int retval, actual;
+
+   //srand(time(NULL));
+   //seq = rand() % 0xF;
+   seq = addr % 0xF;
+
+   pkt_wr[0] = (OPC_RD << 12) | seq;
+   pkt_wr[1] = addr;
+
+   buf_wr = reinterpret_cast<uint8_t*>(pkt_wr);
+
+#ifdef DEBUG_RC
+   printf("buf_wr[0] = %.2X\n", buf_wr[0]);
+   printf("buf_wr[1] = %.2X\n", buf_wr[1]);
+   printf("buf_wr[2] = %.2X\n", buf_wr[2]);
+   printf("buf_wr[3] = %.2X\n", buf_wr[3]);
+#endif
+
+   libusb_fill_bulk_transfer(transfer_rc_out, devh, EP_RCWR, buf_wr, 4, NULL, NULL, USB_TIMEOUT);
+   libusb_submit_transfer(transfer_rc_out);
+   pthread_mutex_lock(&mutex);
+     retval = libusb_handle_events_completed(ctx, NULL);
+   pthread_mutex_unlock(&mutex);
+
+   libusb_fill_bulk_transfer(transfer_rc_in, devh, EP_RCRD, buf_rd, 4, NULL, NULL, USB_TIMEOUT);
+   libusb_submit_transfer(transfer_rc_in);
+   pthread_mutex_lock(&mutex);
+     retval = libusb_handle_events_completed(ctx, NULL);
+   pthread_mutex_unlock(&mutex);
+
+#ifdef DEBUG_RC
+   printf("buf_rd[0] = %.2X\n", buf_rd[0]);
+   printf("buf_rd[1] = %.2X\n", buf_rd[1]);
+   printf("buf_rd[2] = %.2X\n", buf_rd[2]);
+   printf("buf_rd[3] = %.2X\n", buf_rd[3]);
+#endif
+
+   pkt_rd = reinterpret_cast<uint16_t*>(buf_rd);
+
+#ifdef DEBUG_RC
+               printf("pkt_rd[0] = %.4X\n", pkt_rd[0]);
+               printf("pkt_rd[1] = %.4X\n", pkt_rd[1]);
+#endif
+
+   value = pkt_rd[1];
+}
+
+bool usb_rc_regwrite(uint16_t addr, uint16_t value) {
+
+   uint16_t pkt_wr[3];
+   uint8_t *buf_wr;
+   uint8_t buf_rd[2];
+
+   uint8_t seq;
+   int retval, actual;
+
+   srand(time(NULL));
+   seq = rand() % 0xF;
+
+   pkt_wr[0] = (OPC_WR << 12) | seq;
+   pkt_wr[1] = addr;
+   pkt_wr[2] = value;
+
+   buf_wr = reinterpret_cast<uint8_t*>(pkt_wr);
+
+   retval = libusb_bulk_transfer(devh, EP_RCWR, buf_wr, 6, &actual, USB_TIMEOUT);
+
+#ifdef DEBUG
+   printf("actual = %d\n", actual);
+   printf("buf_wr[0] = %.2X\n", buf_wr[0]);
+   printf("buf_wr[1] = %.2X\n", buf_wr[1]);
+   printf("buf_wr[2] = %.2X\n", buf_wr[2]);
+   printf("buf_wr[3] = %.2X\n", buf_wr[3]);
+   printf("buf_wr[4] = %.2X\n", buf_wr[4]);
+   printf("buf_wr[5] = %.2X\n", buf_wr[5]);
+#endif
+
+   if (retval == 0 && actual > 0) { // we write successfully
+
+      retval = libusb_bulk_transfer(devh, EP_RCRD, buf_rd, 2, &actual, USB_TIMEOUT);
+
+      if (retval == 0 && actual > 0) { // we read successfully
+
+         if(buf_rd[0] == seq) {
+
+            if(buf_rd[1] == (OPC_WR << 4)) {
+
+               return true;
+         
+            } else {
+            
+               printf("usb_rc_regwrite: write error - error code received\n");
+               return false;
+            }
+
+         } else {
+
+            printf("usb_rc_regwrite: write error - out of sequence\n");
+            return false;
+         }
+
+      } else {
+
+         printf("usb_rc_regwrite: read (step 2) error: %s\n", libusb_error_name(retval));
+         return false;
+      }
+
+   } else {
+
+       printf("usb_rc_regwrite: write (step 1) error: %s\n", libusb_error_name(retval));
+       return false;
+   }
 }
