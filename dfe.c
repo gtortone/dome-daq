@@ -23,7 +23,7 @@ extern "C" {
 #define EP_DAQRD     	(0x08 | LIBUSB_ENDPOINT_IN)
 #define EP_RCWR		(0x02 | LIBUSB_ENDPOINT_OUT)
 #define EP_RCRD		(0x06 | LIBUSB_ENDPOINT_IN)
-#define USB_TIMEOUT     3000
+#define USB_TIMEOUT     500
 #define LEN_IN_BUFFER	1024*8
 
 #define OPC_WR		0x01
@@ -37,6 +37,7 @@ struct libusb_transfer *transfer_daq_in = NULL;
 struct libusb_transfer *transfer_rc_in = NULL;
 struct libusb_transfer *transfer_rc_out = NULL;
 libusb_context *ctx = NULL;
+static struct timeval usbtv;
 
 bool rc_transfer = false;
 bool cancel_done = false;
@@ -76,7 +77,7 @@ int rb_handle;
 
 /* tid for usb thread */
 pthread_t tid;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex;
 
 #define SOE	0xBAAB
 #define EOE	0xFEEF
@@ -154,52 +155,69 @@ void cb_daq_in(struct libusb_transfer *transfer)
    printf("callback: status = %d - length: %d / rb: level %d / %.2f%%\n", transfer->status, transfer->actual_length, nb, (float)nb/(float)event_buffer_size*100);
 #endif
 
-   if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
+   if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
+
+      // submit the next transfer
+      libusb_submit_transfer(transfer_daq_in);
+
+   } else if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
 
       cancel_done = true;
    
    } else if(transfer->status == LIBUSB_TRANSFER_COMPLETED) {
 
-      int status = rb_get_wp(rb_handle, &wp, 100);
+      if(running) {
 
-      if (status == DB_TIMEOUT) {
+         int status = rb_get_wp(rb_handle, &wp, 100);
 
-         printf("wp timeout. ring buffer full?\n");
+         if (status == DB_TIMEOUT) {
 
-      } else {
+	    printf("wp timeout. ring buffer full?\n");
 
-         int tlen = transfer->actual_length;
+         } else {
 
-         memcpy(wp, transfer->buffer, tlen);
-         rb_increment_wp(rb_handle, tlen);
+	    int tlen = transfer->actual_length;
+
+	    memcpy(wp, transfer->buffer, tlen);
+	    rb_increment_wp(rb_handle, tlen);
 
 #ifdef DEBUG_MORE
-         unsigned short int *bufusint;
-         int buflen;
+	    unsigned short int *bufusint;
+	    int buflen;
 
-         bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
-         buflen = ((tlen/2 * 2) == tlen)?tlen/2:tlen/2 + 1;      
+	    bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
+	    buflen = ((tlen/2 * 2) == tlen)?tlen/2:tlen/2 + 1;      
 
-         for(int i=0; i<buflen; i++)
-            printf("%X ", bufusint[i]);
+	    for(int i=0; i<buflen; i++)
+	       printf("%X ", bufusint[i]);
 #endif
 
-         // submit the next transfer
-         libusb_submit_transfer(transfer_daq_in);
-      }
+	    // submit the next transfer
+   	    libusb_submit_transfer(transfer_daq_in);
+         }
+      }	// end if(running)
    }
+}
+
+void cb_rc_in(struct libusb_transfer *transfer)
+{
+   printf("cb_rc_in transfer code: %s\n", libusb_error_name(transfer->status));
 }
 
 void *usb_events_thread(void *arg) 
 {
-   static struct timeval tv;
+   struct timeval tv;
    tv.tv_sec = 0;
-   tv.tv_usec = 500000;		// 500 msec
+   tv.tv_usec = 100000;
 
-   while(running) {
-      pthread_mutex_lock(&mutex);
-        libusb_handle_events_timeout_completed(ctx, &tv, NULL);
-      pthread_mutex_unlock(&mutex);
+   while(1) {
+#ifdef DEBUG
+      printf("START loop\n");
+#endif
+         libusb_handle_events_timeout(ctx, &tv);
+#ifdef DEBUG
+      printf("END loop\n");
+#endif
    }
 
    return NULL;
@@ -261,11 +279,28 @@ INT frontend_init()
       return(FE_ERR_HW);
    } 
 
+   // try to flush RC read endpoint
+   uint8_t data[4];
+   int len;
+   while( libusb_bulk_transfer(devh, EP_RCRD, data, 4, &len, 250) == 0 )
+      ;
+
    transfer_daq_in = libusb_alloc_transfer(0);
    libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, NULL, USB_TIMEOUT);
 
    transfer_rc_in = libusb_alloc_transfer(0);
    transfer_rc_out = libusb_alloc_transfer(0);
+
+   usbtv.tv_sec = 0;
+   usbtv.tv_usec = 0;
+   //usbtv.tv_usec = 500000;         // 500 msec
+
+   if( pthread_mutex_init(&mutex, NULL) != 0 ) {
+      cm_msg(MERROR, "dfe", "mutex initialization error");
+      return(FE_ERR_HW);
+   }
+   // TEST
+   pthread_create(&tid, NULL, usb_events_thread, NULL);
 
    cm_msg(MINFO,"dfe","Dome FE initialized");
 
@@ -290,14 +325,13 @@ INT begin_of_run(INT run_number, char *error)
 
    running = true;
 
-   libusb_submit_transfer(transfer_daq_in);
-   pthread_create(&tid, NULL, usb_events_thread, NULL);
-
    r = rb_create(event_buffer_size, max_event_size, &rb_handle);
    if(r != DB_SUCCESS) {
       cm_msg(MERROR, "dfe", "failed to initialise ring buffer");
       return(FE_ERR_HW);
    }
+
+   libusb_submit_transfer(transfer_daq_in);
 
    return SUCCESS;
 }
@@ -306,19 +340,18 @@ INT begin_of_run(INT run_number, char *error)
 
 INT end_of_run(INT run_number, char *error)
 {
-   static struct timeval tv;
-   tv.tv_usec = 0;
-   tv.tv_sec = 0;
-
    running = false;
+   int timer = 0;
    
-   pthread_join(tid, NULL);
-
-   libusb_cancel_transfer(transfer_daq_in);
- 
-   while(libusb_handle_events_timeout_completed(ctx, &tv, NULL)) ;
-
    cancel_done = false;
+   int r = libusb_cancel_transfer(transfer_daq_in);
+ 
+   if(r != LIBUSB_ERROR_NOT_FOUND) {
+      while( (!cancel_done) && (timer < 2000) ) {
+         usleep(200000);
+         timer += 200;	// 200 ms
+      }
+   }
 
    rb_delete(rb_handle);
 
@@ -522,12 +555,14 @@ INT read_event(char *pevent, INT off) {
 
 INT read_runcontrol(char *pevent, INT off) {
 
-   uint16_t value;
-   bool r;
+   uint16_t value = 0;
+   bool r = false;
 
    for(int a=0; a<40; a++) {
       r = usb_rc_regread(a, value);
+#ifdef DEBUG_RC
       printf("%d) RC retval = %d - value = %X\n", a, r, value);
+#endif
    }
 
    return 0;
@@ -537,7 +572,6 @@ INT read_runcontrol(char *pevent, INT off) {
 /* --- USB Run Control functions ---------------------------------- */
 
 bool usb_rc_regread(uint16_t addr, uint16_t &value) {
-
    uint16_t pkt_wr[2];
    uint8_t *buf_wr;
    uint8_t buf_rd[4];
@@ -546,8 +580,6 @@ bool usb_rc_regread(uint16_t addr, uint16_t &value) {
    uint8_t seq;
    int retval, actual;
 
-   //srand(time(NULL));
-   //seq = rand() % 0xF;
    seq = addr % 0xF;
 
    pkt_wr[0] = (OPC_RD << 12) | seq;
@@ -562,19 +594,49 @@ bool usb_rc_regread(uint16_t addr, uint16_t &value) {
    printf("buf_wr[3] = %.2X\n", buf_wr[3]);
 #endif
 
-   libusb_fill_bulk_transfer(transfer_rc_out, devh, EP_RCWR, buf_wr, 4, NULL, NULL, USB_TIMEOUT);
-   libusb_submit_transfer(transfer_rc_out);
-   pthread_mutex_lock(&mutex);
-     retval = libusb_handle_events_completed(ctx, NULL);
-   pthread_mutex_unlock(&mutex);
+   retval = libusb_bulk_transfer(devh, EP_RCWR, buf_wr, 4, &actual, USB_TIMEOUT);
 
-   libusb_fill_bulk_transfer(transfer_rc_in, devh, EP_RCRD, buf_rd, 4, NULL, NULL, USB_TIMEOUT);
-   libusb_submit_transfer(transfer_rc_in);
-   pthread_mutex_lock(&mutex);
-     retval = libusb_handle_events_completed(ctx, NULL);
-   pthread_mutex_unlock(&mutex);
+   if (retval == 0 && actual > 0) { // we write successfully
 
+      retval = libusb_bulk_transfer(devh, EP_RCRD, buf_rd, 4, &actual, USB_TIMEOUT);
+
+      if (retval == 0 && actual > 0) { // we read successfully
+
+         if(buf_rd[0] == seq) {
+
+             if(buf_rd[1] == (OPC_RD << 4)) {
+
+                pkt_rd = reinterpret_cast<uint16_t*>(buf_rd);
+ 
 #ifdef DEBUG_RC
+                printf("actual = %d\n", actual);
+                printf("pkt_rd[0] = %.4X\n", pkt_rd[0]);
+                printf("pkt_rd[1] = %.4X\n", pkt_rd[1]);
+#endif
+                value = pkt_rd[1];
+                return true;
+
+             } else {
+
+                printf("usb_rc_regread: read error - error code received");
+                return false;
+             }
+        
+          } else {
+#ifdef DEBUG_RC
+             printf("usb_rc_regread: response out of sequence error\n");
+#endif
+             return false;
+          }
+      }
+   } else {
+#ifdef DEBUG_RC
+      printf("usb_rc_regread: request write error\n");
+#endif
+      return false;
+   }
+
+#ifdef DEBUG_RC 
    printf("buf_rd[0] = %.2X\n", buf_rd[0]);
    printf("buf_rd[1] = %.2X\n", buf_rd[1]);
    printf("buf_rd[2] = %.2X\n", buf_rd[2]);
@@ -584,11 +646,12 @@ bool usb_rc_regread(uint16_t addr, uint16_t &value) {
    pkt_rd = reinterpret_cast<uint16_t*>(buf_rd);
 
 #ifdef DEBUG_RC
-               printf("pkt_rd[0] = %.4X\n", pkt_rd[0]);
-               printf("pkt_rd[1] = %.4X\n", pkt_rd[1]);
+   printf("pkt_rd[0] = %.4X\n", pkt_rd[0]);
+   printf("pkt_rd[1] = %.4X\n", pkt_rd[1]);
 #endif
 
    value = pkt_rd[1];
+   return true;
 }
 
 bool usb_rc_regwrite(uint16_t addr, uint16_t value) {
