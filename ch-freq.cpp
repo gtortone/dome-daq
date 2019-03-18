@@ -11,11 +11,14 @@
 /* Global variables */
 
 extern RunControl RChandle;
+extern pthread_mutex_t mutex;
 
 #define FREQ_REG_OFFSET		0x09	// first frequency register
 
 typedef struct {
    uint16_t freq[CHANNEL_NUM];
+   uint16_t pps;	// PPS counter
+   uint16_t oof;	// Out-of-phase counter
    DWORD last_update;
 } CHANNEL_FREQ_INFO;
 
@@ -35,17 +38,27 @@ INT ch_freq_rall(CHANNEL_FREQ_INFO *info) {
       return FE_SUCCESS;
    }
    
-   //printf("ch_freq_all difftime: %d\n", difftime);
    info->last_update = nowtime;
 
    int i=0;
    bool retval = false;
    for(int addr=FREQ_REG_OFFSET; addr<CHANNEL_NUM; addr++) {
-      retval = RChandle.read_reg(addr, value);
+      pthread_mutex_lock(&mutex);      
+         retval = RChandle.read_reg(addr, value);
+      pthread_mutex_unlock(&mutex);
       if(retval)
          info->freq[i] = value;
       i++;
    }
+
+   pthread_mutex_lock(&mutex);
+      retval = RChandle.read_reg(0x1C, value);
+      if(retval)  
+         info->pps = value;
+      retval = RChandle.read_reg(0x1D, value);
+      if(retval)
+         info->oof = value;
+   pthread_mutex_unlock(&mutex);
 
    return FE_SUCCESS;
 }
@@ -74,14 +87,24 @@ INT ch_freq_get(CHANNEL_FREQ_INFO *info, INT channel, float *pvalue) {
    if(channel == 0)
       ch_freq_rall(info);
 
-   *pvalue = info->freq[channel];
+   if(channel <= CHANNEL_NUM-1)
+      *pvalue = info->freq[channel];
+   else if(channel == CHANNEL_NUM)
+      *pvalue = info->pps;
+   else if(channel == CHANNEL_NUM+1)
+      *pvalue = info->oof;
 
    return FE_SUCCESS;
 }
 
 INT ch_freq_get_label(CHANNEL_FREQ_INFO *info, INT channel, char *name) {
 
-   sprintf(name, "Frequency CH%02d", channel);
+   if(channel <= CHANNEL_NUM-1)
+      sprintf(name, "Frequency CH%02d", channel);
+   else if(channel == CHANNEL_NUM)
+      sprintf(name, "PPS counter");
+   else if(channel == CHANNEL_NUM+1)
+      sprintf(name, "Out-of-phase counter");
 
    return FE_SUCCESS;
 }

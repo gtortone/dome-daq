@@ -1,4 +1,3 @@
-# The MIDASSYS should be defined prior the use of this Makefile
 ifndef MIDASSYS
 missmidas::
 	@echo "...";
@@ -7,37 +6,60 @@ missmidas::
 endif
 
 OS_DIR = linux
-OSFLAGS = -DOS_LINUX -Dextname
-CFLAGS = -O3 -Wall
-LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -lusb-1.0
+LIBS = -lm -lutil -lpthread -lrt -lusb-1.0
+OSFLAGS = -DOS_LINUX
 
-INC_DIR   = $(MIDASSYS)/include
-LIB_DIR   = $(MIDASSYS)/$(OS_DIR)/lib
-SRC_DIR   = $(MIDASSYS)/src
+INC_DIR    = $(MIDASSYS)/include
+LIB_DIR    = $(MIDASSYS)/$(OS_DIR)/lib
+MXML_DIR   = $(MIDASSYS)/../mxml
 
-UFE = dfe
+DRIVERS         = multibit.o multi.o ch-freq.o ch-enable.o ch-power.o ch-ocurr.o
 
 ####################################################################
 # Lines below here should not be edited
 ####################################################################
 
-# MIDAS library
 LIB = $(LIB_DIR)/libmidas.a
 
 # compiler
-CC = gcc
+CC = cc
 CXX = g++
-CFLAGS += -g -I$(INC_DIR)
-LDFLAGS +=
+CFLAGS = -O2 -Wall -I$(INC_DIR) 
+LDFLAGS =
 
-all: $(UFE)
+all: dfe
 
-$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o
-	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o $(LIB) $(LIBS)
-	strip $(UFE)
+dfe:  $(LIB) $(LIB_DIR)/mfe.o dfe.o runcontrol.o $(DRIVERS)
+	$(CC) -o dfe dfe.o $(LIB_DIR)/mfe.o runcontrol.o $(DRIVERS) $(LIB) $(LDFLAGS) $(LIBS)
+	strip dfe
 
-%.o: %.c
-	$(CXX) $(USERFLAGS) $(CFLAGS) $(OSFLAGS) -o $@ -c $<
+dfe.o:	dfe.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
 
-clean::
-	rm -f *.o *~ \#* $(UFE)
+runcontrol.o: runcontrol.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+multi.o: multi.c
+	$(CC) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+multibit.o: multibit.c
+	$(CC) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+ch-freq.o: ch-freq.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+ch-enable.o: ch-enable.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+ch-power.o: ch-power.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+ch-ocurr.o: ch-ocurr.cpp
+	$(CXX) $(CFLAGS) $(OSFLAGS) -c $< -o $@
+
+.c.o:
+	$(CC) $(CFLAGS) $(OSFLAGS) -c $<
+
+clean:
+	rm -f *.o *~ \#* dfe
+

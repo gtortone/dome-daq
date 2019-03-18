@@ -7,7 +7,7 @@
 
 #include "experim.h"
 #include "runcontrol.h"
-#include "ch-enable.h"
+#include "ch-power.h"
 
 /* Global variables */
 
@@ -15,15 +15,15 @@ extern RunControl RChandle;
 extern pthread_mutex_t mutex;
 
 typedef struct {
-   bool enable[32];
+   bool power[32];
    DWORD last_update;
-} CHANNEL_ENABLE_INFO;
+} CHANNEL_POWER_INFO;
 
-INT ch_enable_rall(CHANNEL_ENABLE_INFO *info);
+INT ch_power_rall(CHANNEL_POWER_INFO *info);
 
 /*---- support routines --------------------------------------------*/
 
-INT ch_enable_rall(CHANNEL_ENABLE_INFO *info) {
+INT ch_power_rall(CHANNEL_POWER_INFO *info) {
  
    DWORD nowtime = ss_time();
    DWORD difftime = nowtime - info->last_update;
@@ -38,50 +38,50 @@ INT ch_enable_rall(CHANNEL_ENABLE_INFO *info) {
    info->last_update = nowtime;
 
    pthread_mutex_lock(&mutex);
-      RChandle.read_reg(0x6, value);
+      RChandle.read_reg(0x2, value);
    pthread_mutex_unlock(&mutex);
    for(int i=0; i<16; i++) 
-      info->enable[i] = GETBIT(value, i);
+      info->power[i] = ~(GETBIT(value, i));
 
    pthread_mutex_lock(&mutex);
-      RChandle.read_reg(0x7, value);
+      RChandle.read_reg(0x3, value);
    pthread_mutex_unlock(&mutex);
    for(int i=0; i<16; i++)
-      info->enable[i+16] = GETBIT(value, i);
+      info->power[i+16] = ~(GETBIT(value, i));
 
    return FE_SUCCESS;
 }
 
 /*---- device driver routines --------------------------------------*/
 
-INT ch_enable_init(HNDLE hkey, void **pinfo) {
+INT ch_power_init(HNDLE hkey, void **pinfo) {
 
    HNDLE hDB;
-   CHANNEL_ENABLE_INFO *info;
+   CHANNEL_POWER_INFO *info;
 
-   info = (CHANNEL_ENABLE_INFO *) calloc(1, sizeof(CHANNEL_ENABLE_INFO));
+   info = (CHANNEL_POWER_INFO *) calloc(1, sizeof(CHANNEL_POWER_INFO));
    *pinfo = info;
 
    cm_get_experiment_database(&hDB, NULL);
   
    info->last_update = 0;
-   ch_enable_rall(static_cast<CHANNEL_ENABLE_INFO*>(info));
+   ch_power_rall(static_cast<CHANNEL_POWER_INFO*>(info));
    info->last_update = ss_time();
 
    return FE_SUCCESS; 
 }
 
-INT ch_enable_get(CHANNEL_ENABLE_INFO *info, INT channel, float *pvalue) {
+INT ch_power_get(CHANNEL_POWER_INFO *info, INT channel, float *pvalue) {
 
    if(channel == 0)
-      ch_enable_rall(info);
+      ch_power_rall(info);
 
-   info->enable[channel]?(*pvalue = 1):(*pvalue = 0);
+   info->power[channel]?(*pvalue = 1):(*pvalue = 0);
 
    return FE_SUCCESS;
 }
 
-INT ch_enable_set(CHANNEL_ENABLE_INFO *info, INT channel, float value) {
+INT ch_power_set(CHANNEL_POWER_INFO *info, INT channel, float value) {
 
    uint16_t reg;
 
@@ -90,41 +90,41 @@ INT ch_enable_set(CHANNEL_ENABLE_INFO *info, INT channel, float value) {
 
    if(channel < 16) {
       pthread_mutex_lock(&mutex);
-         RChandle.read_reg(0x6, reg);
+         RChandle.read_reg(0x2, reg);
       pthread_mutex_unlock(&mutex);
       if(value)
-         SETBIT(reg, channel);
-      else
          RSTBIT(reg, channel);
-      printf("SET 0x6 value:%f ch:%d reg:%X\n", value, channel, reg);
+      else
+         SETBIT(reg, channel);
+      printf("SET 0x2 value:%f ch:%d reg:%X\n", value, channel, reg);
       pthread_mutex_lock(&mutex);
-         RChandle.write_reg(0x6, reg);
+         RChandle.write_reg(0x2, reg);
       pthread_mutex_unlock(&mutex);
    } else {
       pthread_mutex_lock(&mutex);
-         RChandle.read_reg(0x7, reg);
+         RChandle.read_reg(0x3, reg);
       pthread_mutex_unlock(&mutex);
       if(value)
-         SETBIT(reg, channel-16);
-      else
          RSTBIT(reg, channel-16);
-      printf("SET 0x7 value:%f ch:%d reg:%X\n", value, channel, reg);
+      else
+         SETBIT(reg, channel-16);
+      printf("SET 0x3 value:%f ch:%d reg:%X\n", value, channel, reg);
       pthread_mutex_lock(&mutex);
-         RChandle.write_reg(0x7, reg);
+         RChandle.write_reg(0x3, reg);
       pthread_mutex_unlock(&mutex);
    }
 
    return FE_SUCCESS; 
 }
 
-INT ch_enable_get_label(CHANNEL_ENABLE_INFO *info, INT channel, char *name) {
+INT ch_power_get_label(CHANNEL_POWER_INFO *info, INT channel, char *name) {
 
-   sprintf(name, "Data enable CH%02d", channel);
+   sprintf(name, "Power enable CH%02d", channel);
 
    return FE_SUCCESS;
 }
 
-INT ch_enable_exit(CHANNEL_ENABLE_INFO *info) {
+INT ch_power_exit(CHANNEL_POWER_INFO *info) {
 
    free(info);
 
@@ -133,7 +133,7 @@ INT ch_enable_exit(CHANNEL_ENABLE_INFO *info) {
 
 /*---- device driver entry point -----------------------------------*/
 
-INT ch_enable(INT cmd, ...)
+INT ch_power(INT cmd, ...)
 {
 
    va_list argptr;
@@ -152,33 +152,33 @@ INT ch_enable(INT cmd, ...)
    case CMD_INIT:
       hKey = va_arg(argptr, HNDLE);
       info = va_arg(argptr, void *);
-      status = ch_enable_init(hKey, static_cast<void **>(info));
+      status = ch_power_init(hKey, static_cast<void **>(info));
       break;
 
    case CMD_EXIT:
-      info = va_arg(argptr, CHANNEL_ENABLE_INFO *);
-      status = ch_enable_exit(static_cast<CHANNEL_ENABLE_INFO*>(info));
+      info = va_arg(argptr, CHANNEL_POWER_INFO *);
+      status = ch_power_exit(static_cast<CHANNEL_POWER_INFO*>(info));
       break;
 
    case CMD_GET_LABEL:
-      info = va_arg(argptr, CHANNEL_ENABLE_INFO *);
+      info = va_arg(argptr, CHANNEL_POWER_INFO *);
       channel = va_arg(argptr, INT);
       name = va_arg(argptr, char *);
-      status = ch_enable_get_label(static_cast<CHANNEL_ENABLE_INFO*>(info), channel, name);
+      status = ch_power_get_label(static_cast<CHANNEL_POWER_INFO*>(info), channel, name);
       break; 
 
    case CMD_GET:
       info = va_arg(argptr, void *);
       channel = va_arg(argptr, INT);
       pvalue = va_arg(argptr, float *);
-      status = ch_enable_get(static_cast<CHANNEL_ENABLE_INFO*>(info), channel, pvalue);
+      status = ch_power_get(static_cast<CHANNEL_POWER_INFO*>(info), channel, pvalue);
       break;
 
    case CMD_SET:
       info = va_arg(argptr, void *);
       channel = va_arg(argptr, INT);
       value = va_arg(argptr, double);
-      status = ch_enable_set(static_cast<CHANNEL_ENABLE_INFO*>(info), channel, value);
+      status = ch_power_set(static_cast<CHANNEL_POWER_INFO*>(info), channel, value);
 
    default:
       break;

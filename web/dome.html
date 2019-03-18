@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="mcss">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link rel="stylesheet" href="bootstrap.min.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="jquery.min.js"></script>
+   <script src="bootstrap.min.js"></script>
+
+   <title>Dome Run Control</title>
+
+   <style>
+      .mtable td { padding: 10px; }
+   </style>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Dome',2000);" style="background-color:#F8F8F8;">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+<div class="container-fluid">
+   <h2>Dome Run Control</h2>
+   <div class="row">
+   <div class="col-lg-6">
+   <table class="table table-bordered">
+      <thead>
+      <tr>
+         <th style="width: 100px; height: 20px;"> Channel </th>
+         <th style="width: 100px;"> Frequency </th>
+         <th style="width: 100px;"> Overcurrent </th>
+         <th style="width: 100px;"> ADC enable </th>
+         <th style="width: 100px;"> Power enable </th>
+      </thead>
+      <tr>
+	 <td style="height: 10px;">CH 00</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[0]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[21]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[0]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[19]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 01</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[1]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[22]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[1]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[20]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 02</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[2]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[23]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[2]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[21]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 03</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[3]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[24]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[3]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[22]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 04</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[4]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[25]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[4]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[23]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 05</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[5]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[26]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[5]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[24]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 06</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[6]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[27]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[6]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[25]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 07</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[7]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[28]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[7]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[26]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 08</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[8]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[29]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[8]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[27]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 09</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[9]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[30]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[9]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[28]"></input></td>
+      </tr>
+   </table>
+   <div class="row">
+   <div class="col-lg-3">
+   <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Counter</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>PPS</td>
+        <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[19]"></td>
+      </tr>
+      <tr>
+        <td>Out of phase</td>
+        <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[20]"></td>
+      </tr>
+    </tbody>
+   </table>
+   </div> 
+   <div class="col-lg-9">
+   <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Calibration</th>
+        <th>Auto-trigger</th>
+        <th>Clock sel out</th>
+        <th>Locked</th>
+        <th>Clock fail</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>X</td>
+        <td>X</td>
+        <td>X</td>
+        <td>X</td>
+        <td>X</td>
+      </tr>
+    </tbody>
+   </table>
+   </div>
+   </div> <!-- end row -->
+   </div>
+   <div class="col-lg-6">
+   <table class="table table-bordered">
+      <thead>
+      <tr>
+         <th style="width: 100px; height: 20px;"> Channel </th>
+         <th style="width: 100px;"> Frequency </th>
+         <th style="width: 100px;"> Overcurrent </th>
+         <th style="width: 100px;"> ADC enable </th>
+         <th style="width: 100px;"> Power enable </th>
+      </thead>
+      <tr>
+	 <td style="height: 10px;">CH 10</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[10]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[31]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[10]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[29]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 11</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[11]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[32]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[11]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[30]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 12</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[12]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[33]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[12]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[31]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 13</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[13]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[34]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[13]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[32]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 14</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[14]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[35]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[14]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[33]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 15</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[15]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[36]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[15]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[34]"></input></td>
+      </tr>
+      <tr>     
+	 <td style="height: 10px;">CH 16</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[16]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[37]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[16]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[35]"></input></td>
+      </tr>
+      <tr>
+	 <td style="height: 10px;">CH 17</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[17]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[38]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[17]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[36]"></input></td>
+      </tr>
+      <tr>    
+	 <td style="height: 10px;">CH 18</td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[18]"></div></td>
+	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome0001-rc/Variables/Input[39]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[18]"></input></td>
+	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome0001-rc/Variables/Output[37]"></input></td>
+      </tr>
+   </table>
+   </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

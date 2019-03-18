@@ -64,7 +64,7 @@ bool RunControl::read_reg(uint16_t addr, uint16_t &value) {
 
              } else {
 
-                printf("usb_rc_regread: read error - error code received");
+                printf("usb_rc_regread: read error - error code received\n");
                 return false;
              }
 

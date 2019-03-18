@@ -632,6 +632,7 @@ INT multi_idle(EQUIPMENT * pequipment)
       }
    }
 
+   //ss_sleep(100);
 
    return FE_SUCCESS;
 }
@@ -702,8 +703,6 @@ INT cd_multi_read(char *pevent, int offset)
       ybk_close((DWORD *) pevent, pdata);
 
       return ybk_size((DWORD *) pevent);
-#lese
-      assert(!"YBOS support not compiled in");
 #endif
    }
 
