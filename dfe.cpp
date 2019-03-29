@@ -302,42 +302,6 @@ EQUIPMENT equipment[] = {
      read_data,              /* readout routine */
      NULL, NULL, NULL, NULL,},
    {""}
-#if 0
-   {"Dome%02d-rc",           /* equipment name */
-    {2, 2,                   /* event ID, trigger mask */
-     "SYSTEM",               /* event buffer */
-     EQ_SLOW,                /* equipment type */
-     0,                      /* event source (not used) */
-     "MIDAS",                /* format */
-     TRUE,                   /* enabled */
-     RO_ALWAYS,   	     /* readout always */
-     500,                    /* poll every period (ms) */
-     0,                      /* stop run after this event limit */
-     0,                      /* number of sub events */
-     1,                      /* log history */
-     "", "", ""},
-     cd_multi_read,          /* readout routine */
-     cd_multi,               /* class driver main routine */
-     multi_driver,           /* device driver list */
-     NULL,                   /* init string */
-    },
-    {"Dome%02d-mon",         /* equipment name */
-    {3, 4,                   /* event ID, trigger mask */
-     "SYSTEM",               /* event buffer */
-     EQ_PERIODIC,            /* equipment type */
-     0,                      /* event source (not used) */
-     "MIDAS",                /* format */
-     TRUE,                   /* enabled */
-     RO_ALWAYS | RO_ODB,     /* readout always */
-     2000,                   /* poll every period (ms) */
-     0,                      /* stop run after this event limit */
-     0,                      /* number of sub events */
-     1,                      /* log history */
-     "", "", ""},
-     read_monitor,           /* readout routine */
-    },
-   {""}
-#endif 
 };
 
 #ifdef __cplusplus
