@@ -1,4 +1,5 @@
 dfe
+*.root
 
 # Prerequisites
 *.d
