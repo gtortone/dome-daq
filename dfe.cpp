@@ -7,18 +7,11 @@
 
 #include "experim.h"
 #include "runcontrol.h"
-#include "multi.h"
-#include "multibit.h"
-#include "ch-freq.h"
-#include "ch-enable.h"
-#include "ch-power.h"
-#include "ch-ocurr.h"
 
 /* make frontend functions callable from the C framework */
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*-- Globals -------------------------------------------------------*/
 
@@ -97,25 +90,189 @@ INT frontend_loop();
 INT interrupt_configure(INT cmd, INT source, POINTER_T adr);
 INT poll_event(INT source, INT count, BOOL test);
 INT read_event(char *pevent, INT off);
+INT read_data(char *pevent, INT off);
+INT read_monitor(char *pevent, INT off);
+void read_dome_status(void);
+void enable_update(INT hDB, INT hkey, void *info);
+void power_update(INT hDB, INT hkey, void *info);
+void time_update(INT hDB, INT hkey, void *info);
+void setup_update(INT hDB, INT hkey, void *info);
 
 void *usb_events_thread(void *);
 
-/*-- Device Driver list --------------------------------------------*/
+HNDLE frequency_handle;
+HNDLE overcurrent_handle;
+HNDLE counters_handle;
+HNDLE pll_handle;
+HNDLE enable_handle;
+HNDLE power_handle;
+HNDLE time_handle;
+HNDLE setup_handle;
 
-DEVICE_DRIVER multi_driver[] = {
-   {"Frequency",    ch_freq,   CHANNEL_NUM+2, NULL, DF_INPUT  | DF_MULTITHREAD}, // Frequency and PPS params
-   {"Enable",       ch_enable, CHANNEL_NUM,   NULL, DF_OUTPUT | DF_MULTITHREAD}, 
-   {"Power",        ch_power,  CHANNEL_NUM,   NULL, DF_OUTPUT | DF_MULTITHREAD}, 
-   {"Overcurrent",  ch_ocurr,  CHANNEL_NUM,   NULL, DF_INPUT  | DF_MULTITHREAD}, 
-   {""}
+struct {
+   DWORD Channel[CHANNEL_NUM];
+} frequency_settings;
+
+struct {
+   BOOL Channel[CHANNEL_NUM];
+} overcurrent_settings;
+
+struct {
+   DWORD pps;
+   DWORD oop;
+} counters_settings;
+
+struct {
+   BOOL locked;
+   BOOL failed;
+} pll_settings;
+
+struct {
+   BOOL Channel[CHANNEL_NUM];
+} enable_settings;
+
+struct {
+   BOOL Channel[CHANNEL_NUM];
+} power_settings;
+
+struct {
+   DWORD dark;
+   DWORD peak;
+} time_settings;
+
+struct {
+   BOOL calibration;
+   BOOL autotrigger;
+   BOOL clockout;
+} setup_settings;
+
+const char *frequency_config_str[] = {\
+    "Channel = DWORD[19] :",\
+    "[0] 0",\
+    "[1] 0",\
+    "[2] 0",\
+    "[3] 0",\
+    "[4] 0",\
+    "[5] 0",\
+    "[6] 0",\
+    "[7] 0",\
+    "[8] 0",\
+    "[9] 0",\
+    "[10] 0",\
+    "[11] 0",\
+    "[12] 0",\
+    "[13] 0",\
+    "[14] 0",\
+    "[15] 0",\
+    "[16] 0",\
+    "[17] 0",\
+    "[18] 0",\
+    NULL
+};
+
+const char *overcurrent_config_str[] = {\
+    "Channel = BOOL[19] :",\
+    "[0] 0",\
+    "[1] 0",\
+    "[2] 0",\
+    "[3] 0",\
+    "[4] 0",\
+    "[5] 0",\
+    "[6] 0",\
+    "[7] 0",\
+    "[8] 0",\
+    "[9] 0",\
+    "[10] 0",\
+    "[11] 0",\
+    "[12] 0",\
+    "[13] 0",\
+    "[14] 0",\
+    "[15] 0",\
+    "[16] 0",\
+    "[17] 0",\
+    "[18] 0",\
+    NULL
+};
+
+const char *counters_config_str[] = {\
+   "PPS counter = DWORD : 0",\
+   "OOP counter = DWORD : 0",\
+   NULL
+};
+
+const char *pll_config_str[] = {\
+   "PLL locked = BOOL : 0",\
+   "PLL failed = BOOL : 0",\
+   NULL
+};
+
+const char *enable_config_str[] = {\
+    "Channel = BOOL[19] :",\
+    "[0] 0",\
+    "[1] 0",\
+    "[2] 0",\
+    "[3] 0",\
+    "[4] 0",\
+    "[5] 0",\
+    "[6] 0",\
+    "[7] 0",\
+    "[8] 0",\
+    "[9] 0",\
+    "[10] 0",\
+    "[11] 0",\
+    "[12] 0",\
+    "[13] 0",\
+    "[14] 0",\
+    "[15] 0",\
+    "[16] 0",\
+    "[17] 0",\
+    "[18] 0",\
+    NULL
+};
+
+const char *power_config_str[] = {\
+    "Channel = BOOL[19] :",\
+    "[0] 0",\
+    "[1] 0",\
+    "[2] 0",\
+    "[3] 0",\
+    "[4] 0",\
+    "[5] 0",\
+    "[6] 0",\
+    "[7] 0",\
+    "[8] 0",\
+    "[9] 0",\
+    "[10] 0",\
+    "[11] 0",\
+    "[12] 0",\
+    "[13] 0",\
+    "[14] 0",\
+    "[15] 0",\
+    "[16] 0",\
+    "[17] 0",\
+    "[18] 0",\
+    NULL
+};
+
+const char *time_config_str[] = {\
+   "Dark delay = DWORD : 0",\
+   "Peak delay = DWORD : 0",\
+   NULL
+};
+
+const char *setup_config_str[] = {\
+   "Calibration  = BOOL : 0",\
+   "Auto Trigger = BOOL : 0",\
+   "Clock Out = BOOL : 0",\
+   NULL
 };
 
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
 
-   {"Dome%04d-ev",           /* equipment name */
-    {1, 0,                   /* event ID, trigger mask */
+   {"Dome%02d_events",           /* equipment name */
+    {1, 1,                   /* event ID, trigger mask */
      "SYSTEM",               /* event buffer */
      EQ_POLLED,              /* equipment type */
      0,                      /* event source (not used) */
@@ -127,10 +284,27 @@ EQUIPMENT equipment[] = {
      0,                      /* number of sub events */
      0,                      /* log history */
      "", "", "",},
-    read_event,          /* readout routine */
-    },
-   {"Dome%04d-rc",           /* equipment name */
-    {2, 0,                   /* event ID, trigger mask */
+    read_event,              /* readout routine */
+    NULL, NULL, NULL, NULL, },
+  {"Dome%02d_data",          /* equipment name */
+    {2, 2,                   /* event ID, trigger mask */
+     "SYSTEM",               /* event buffer */
+     EQ_PERIODIC,            /* equipment type */
+     0,                      /* event source (not used) */
+     "MIDAS",                /* format */
+     TRUE,                   /* enabled */
+     RO_ALWAYS | RO_ODB,     /* readout always */
+     1000,                   /* poll every period (ms) */
+     0,                      /* stop run after this event limit */
+     0,                      /* number of sub events */
+     1,                      /* log history */
+     "", "", ""},
+     read_data,              /* readout routine */
+     NULL, NULL, NULL, NULL,},
+   {""}
+#if 0
+   {"Dome%02d-rc",           /* equipment name */
+    {2, 2,                   /* event ID, trigger mask */
      "SYSTEM",               /* event buffer */
      EQ_SLOW,                /* equipment type */
      0,                      /* event source (not used) */
@@ -142,12 +316,28 @@ EQUIPMENT equipment[] = {
      0,                      /* number of sub events */
      1,                      /* log history */
      "", "", ""},
-     cd_multi_read,       /* readout routine */
-     cd_multi,            /* class driver main routine */
+     cd_multi_read,          /* readout routine */
+     cd_multi,               /* class driver main routine */
      multi_driver,           /* device driver list */
      NULL,                   /* init string */
     },
+    {"Dome%02d-mon",         /* equipment name */
+    {3, 4,                   /* event ID, trigger mask */
+     "SYSTEM",               /* event buffer */
+     EQ_PERIODIC,            /* equipment type */
+     0,                      /* event source (not used) */
+     "MIDAS",                /* format */
+     TRUE,                   /* enabled */
+     RO_ALWAYS | RO_ODB,     /* readout always */
+     2000,                   /* poll every period (ms) */
+     0,                      /* stop run after this event limit */
+     0,                      /* number of sub events */
+     1,                      /* log history */
+     "", "", ""},
+     read_monitor,           /* readout routine */
+    },
    {""}
+#endif 
 };
 
 #ifdef __cplusplus
@@ -236,8 +426,11 @@ INT frontend_init()
 {
    INT status, size, state;
    int r;
-   char sEpath[64];
+   char path[64];
 
+   set_equipment_status(equipment[0].name, "Initializing...", "#FFFF00");
+   set_equipment_status(equipment[1].name, "Initializing...", "#FFFF00");
+ 
    size = sizeof(state);
    status = db_get_value(hDB, 0, "Runinfo/State", &state, &size, TID_INT, TRUE);
 
@@ -256,11 +449,6 @@ INT frontend_init()
       cm_msg(MERROR,"Init", "Must specify the frontend index (ie use -i X command line option)");
       return FE_ERR_HW;
    }
-
-   // set EventID with Frontend Index (Dome number)
-   equipment[0].info.event_id = feIndex;
-   snprintf(sEpath, sizeof(sEpath), "Equipment/%s/Common/Event ID", equipment[0].name);
-   db_set_value(hDB, 0, sEpath, &(equipment[0].info.event_id), sizeof(WORD), 1, TID_WORD);
 
    r = libusb_init(NULL);
    if(r < 0) {
@@ -300,11 +488,172 @@ INT frontend_init()
       return(FE_ERR_HW);
    }
 
+   // create USB event thread
    pthread_create(&tid, NULL, usb_events_thread, NULL);
 
+   // initialize run control object
    RChandle.init(&devh);
 
-   cm_msg(MINFO,"dfe","Dome FE initialized");
+   /* initialize ODB */
+
+   // set EventID with Frontend Index (Dome number)
+   equipment[0].info.event_id = feIndex;
+   snprintf(path, sizeof(path), "Equipment/%s/Common/Event ID", equipment[0].name);
+   db_set_value(hDB, 0, path, &(equipment[0].info.event_id), sizeof(WORD), 1, TID_WORD);
+
+   // read actual run control parameters... 
+   read_dome_status();
+
+   // Frequency
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Frequency/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(frequency_config_str));
+   status = db_find_key(hDB, 0, path, &frequency_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, frequency_handle, &frequency_settings, sizeof(frequency_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Overcurrent
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Overcurrent/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(overcurrent_config_str));
+   status = db_find_key(hDB, 0, path, &overcurrent_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, overcurrent_handle, &overcurrent_settings, sizeof(overcurrent_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Counters
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Counters/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(counters_config_str));
+   status = db_find_key(hDB, 0, path, &counters_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, counters_handle, &counters_settings, sizeof(counters_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // PLL
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/PLL/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(pll_config_str));
+   status = db_find_key(hDB, 0, path, &pll_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, pll_handle, &pll_settings, sizeof(pll_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Enable
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Enable/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(enable_config_str));
+   status = db_find_key(hDB, 0, path, &enable_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_set_record(hDB, enable_handle, &enable_settings, sizeof(enable_settings), 0);
+   if (status != DB_SUCCESS){
+      printf("Couldn't update ODB for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't update ODB for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   status = db_open_record(hDB, enable_handle, &enable_settings, sizeof(enable_settings), MODE_READ, enable_update, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Power
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Power/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(power_config_str));
+   status = db_find_key(hDB, 0, path, &power_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_set_record(hDB, power_handle, &power_settings, sizeof(power_settings), 0);
+   if (status != DB_SUCCESS){
+      printf("Couldn't update ODB for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't update ODB for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   status = db_open_record(hDB, power_handle, &power_settings, sizeof(power_settings), MODE_READ, power_update, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Time
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Time/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(time_config_str));
+   status = db_find_key(hDB, 0, path, &time_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_set_record(hDB, time_handle, &time_settings, sizeof(time_settings), 0);
+   if (status != DB_SUCCESS){
+      printf("Couldn't update ODB for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't update ODB for %s. Return code: %d", path, status);
+      return status;
+   }
+   
+   status = db_open_record(hDB, time_handle, &time_settings, sizeof(time_settings), MODE_READ, time_update, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   // Setup
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/Setup/", equipment[1].name);
+   status = db_create_record(hDB, 0, path, strcomb(setup_config_str));
+   status = db_find_key(hDB, 0, path, &setup_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_set_record(hDB, setup_handle, &setup_settings, sizeof(setup_settings), 0);
+   if (status != DB_SUCCESS){
+      printf("Couldn't update ODB for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't update ODB for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   status = db_open_record(hDB, setup_handle, &setup_settings, sizeof(setup_settings), MODE_READ, setup_update, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
+   set_equipment_status(equipment[0].name, "Initialized", "#00ff00");
+   set_equipment_status(equipment[1].name, "Initialized", "#00ff00");
 
    return SUCCESS;
 }
@@ -327,6 +676,8 @@ INT begin_of_run(INT run_number, char *error)
 
    running = true;
 
+   set_equipment_status(equipment[0].name, "Starting run...", "#FFFF00");
+
    r = rb_create(event_buffer_size, max_event_size, &rb_handle);
    if(r != DB_SUCCESS) {
       cm_msg(MERROR, "dfe", "failed to initialise ring buffer");
@@ -334,6 +685,8 @@ INT begin_of_run(INT run_number, char *error)
    }
 
    libusb_submit_transfer(transfer_daq_in);
+
+   set_equipment_status(equipment[0].name, "Started run", "#00ff00");
 
    return SUCCESS;
 }
@@ -345,6 +698,8 @@ INT end_of_run(INT run_number, char *error)
    running = false;
    int timer = 0;
    
+   set_equipment_status(equipment[0].name, "Ending run...", "#FFFF00");
+
    cancel_done = false;
    int r = libusb_cancel_transfer(transfer_daq_in);
  
@@ -356,6 +711,8 @@ INT end_of_run(INT run_number, char *error)
    }
 
    rb_delete(rb_handle);
+
+   set_equipment_status(equipment[0].name, "Ended run", "#00ff00");
 
    return SUCCESS;
 }
@@ -389,7 +746,7 @@ INT frontend_loop()
 
 /*-- Trigger event routines ----------------------------------------*/
 
-INT poll_event(INT source, INT count, BOOL test)
+extern "C" INT poll_event(INT source, INT count, BOOL test)
 {
    if(running) {
 
@@ -412,7 +769,7 @@ INT poll_event(INT source, INT count, BOOL test)
 
 /*-- Interrupt configuration ---------------------------------------*/
 
-INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+extern "C" INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
 {
    return SUCCESS;
 }
@@ -541,16 +898,231 @@ INT read_event(char *pevent, INT off) {
          /* init bank structure */
          bk_init(pevent);
 
-         bk_create(pevent, "DATA", TID_DWORD, (void **)&pdata);
+         bk_create(pevent, "CHAN", TID_DWORD, (void **)&pdata);
          *pdata++ = channel;
+         bk_close(pevent, pdata);
+
+         bk_create(pevent, "TIME", TID_DWORD, (void **)&pdata);
          *pdata++ = time;
+         bk_close(pevent, pdata);
+
+         bk_create(pevent, "TIHR", TID_DWORD, (void **)&pdata);
          *pdata++ = time_hres;
+         bk_close(pevent, pdata);
+
+         bk_create(pevent, "WIDT", TID_DWORD, (void **)&pdata);
          *pdata++ = width;
+         bk_close(pevent, pdata);
+
+         bk_create(pevent, "WIHR", TID_DWORD, (void **)&pdata);
          *pdata++ = width_hres;
+         bk_close(pevent, pdata);
+
+         bk_create(pevent, "ENER", TID_DWORD, (void **)&pdata);
          *pdata++ = energy;
          bk_close(pevent, pdata);
 
          return bk_size(pevent);
       }
    }	// end loop
+}
+
+INT read_data(char *pevent, INT off) {
+
+   bool retval = false;
+   uint16_t value;
+   int i = 0;
+
+   /* Frequency */
+   for(int addr=FREQ_REG_OFFSET; addr<CHANNEL_NUM; addr++) {
+      pthread_mutex_lock(&mutex);
+         retval = RChandle.read_reg(addr, value);
+      pthread_mutex_unlock(&mutex);
+      if(retval)
+         frequency_settings.Channel[i] = value;
+      i++;
+   }
+   /* Overcurrent */
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x0, value);
+   pthread_mutex_unlock(&mutex);
+   for(i=0; i<16; i++)
+      overcurrent_settings.Channel[i] = GETBIT(value, i)==0?true:false;
+
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x1, value);
+   pthread_mutex_unlock(&mutex);
+   for(i=16; i<CHANNEL_NUM; i++)
+      overcurrent_settings.Channel[i] = GETBIT(value, (i-16))==0?true:false;
+ 
+   /* PPS and OOP counters */
+   pthread_mutex_lock(&mutex);
+      retval = RChandle.read_reg(0x1C, value);
+      if(retval)
+         counters_settings.pps = value;
+      retval = RChandle.read_reg(0x1D, value);
+      if(retval)
+         counters_settings.oop = value;
+   pthread_mutex_unlock(&mutex);
+
+   /* PLL flags */
+   pthread_mutex_lock(&mutex);
+      retval = RChandle.read_reg(0x8, value);
+      if(retval) {
+         pll_settings.locked = ((value & 0x4000) > 0);
+         pll_settings.failed = ((value & 0x8000) > 0);
+      }
+   pthread_mutex_unlock(&mutex);
+
+   db_send_changed_records();
+
+   return 0;
+}
+
+INT read_monitor(char *pevent, INT off) {
+
+   DWORD *pdata;
+   static int i=0;
+   static int j=1;
+   static int k=2;
+
+   i++; j++; k++;
+   printf("%d \n", i);
+
+   /* init bank structure */
+   bk_init(pevent);
+
+   bk_create(pevent, "ENV", TID_DWORD, (void **)&pdata);  
+   *pdata++ = i;
+   *pdata++ = j;
+   *pdata++ = k;
+
+   bk_close(pevent, pdata);
+
+   return bk_size(pevent);
+}
+
+/*
+ * function used to get run control R/W variable only first time
+ */
+void read_dome_status(void) {
+
+   uint16_t value;
+
+   // Enable
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x6, value);
+   pthread_mutex_unlock(&mutex);
+   for(int i=0; i<16; i++)
+      enable_settings.Channel[i] = (GETBIT(value, i)==0?false:true);
+
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x7, value);
+   pthread_mutex_unlock(&mutex);
+   for(int i=16; i<CHANNEL_NUM; i++)
+      enable_settings.Channel[i] = (GETBIT(value, (i-16))==0?false:true);
+
+   // Power
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x2, value);
+   pthread_mutex_unlock(&mutex);
+   for(int i=0; i<16; i++)
+      power_settings.Channel[i] = (GETBIT(value, i)==0?true:false);
+
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x3, value);
+   pthread_mutex_unlock(&mutex);
+   for(int i=16; i<CHANNEL_NUM; i++)
+      power_settings.Channel[i] = (GETBIT(value, (i-16))==0?true:false);
+
+   // Time
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x4, value);
+   pthread_mutex_unlock(&mutex);
+   time_settings.dark = value;
+
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x5, value);
+   pthread_mutex_unlock(&mutex);
+   time_settings.peak = value;
+
+   // Setup
+   pthread_mutex_lock(&mutex);
+      RChandle.read_reg(0x8, value);
+   pthread_mutex_unlock(&mutex);
+   setup_settings.calibration = (GETBIT(value, 0)==0?false:true);
+   setup_settings.autotrigger = (GETBIT(value, 1)==0?false:true);
+   setup_settings.clockout = (GETBIT(value, 13)==0?false:true);
+}
+
+void enable_update(INT hDB, INT hkey, void *info) {
+
+   uint16_t value;
+
+   value = 0;
+   for(int i=0; i<16; i++) {
+      value |= (enable_settings.Channel[i] << i);
+   }
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x6, value);
+   pthread_mutex_unlock(&mutex);
+
+   value = 0;
+   for(int i=16; i<CHANNEL_NUM; i++) {
+      value |= (enable_settings.Channel[i] << (i-16));
+   }
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x7, value);
+   pthread_mutex_unlock(&mutex);
+}
+
+void power_update(INT hDB, INT hkey, void *info) {
+
+   uint16_t value;
+
+   value = 0;
+   for(int i=0; i<16; i++) {
+      value |= (!power_settings.Channel[i] << i);
+   }
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x2, value);
+   pthread_mutex_unlock(&mutex);
+
+   value = 0;
+   for(int i=16; i<CHANNEL_NUM; i++) {
+      value |= (!power_settings.Channel[i] << (i-16));
+   }
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x3, value);
+   pthread_mutex_unlock(&mutex);
+
+}
+
+void time_update(INT hDB, INT hkey, void *info) {
+
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x4, time_settings.dark);
+   pthread_mutex_unlock(&mutex);
+
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x5, time_settings.peak);
+   pthread_mutex_unlock(&mutex);
+}
+
+void setup_update(INT hDB, INT hkey, void *info) {
+   
+   uint16_t value = 0;
+
+   if(setup_settings.calibration)
+      SETBIT(value, 0);
+
+   if(setup_settings.autotrigger)
+      SETBIT(value, 1);
+
+   if(setup_settings.clockout)
+      SETBIT(value, 13);
+
+   pthread_mutex_lock(&mutex);
+      RChandle.write_reg(0x8, value);
+   pthread_mutex_unlock(&mutex);
 }

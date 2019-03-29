@@ -7,4 +7,6 @@
 
 #define CHANNEL_NUM     19
 
+#define FREQ_REG_OFFSET         0x09    // first frequency register
+
 #endif
