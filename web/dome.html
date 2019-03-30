@@ -20,6 +20,7 @@ function get_frontend_status(fename) {
       table3 = document.getElementById("table3")
       table4 = document.getElementById("table4")
       table5 = document.getElementById("table5")
+      table6 = document.getElementById("table6")
       msg = document.getElementById("errmsg")
       // status = 1 means frontend is running
       if (response.result.status === 1) {
@@ -28,6 +29,7 @@ function get_frontend_status(fename) {
          table3.style.display = "table"
          table4.style.display = "table"
          table5.style.display = "table"
+         table6.style.display = "table"
 	 msg.style.display = "none"
       } else {
          table1.style.display = "none"
@@ -35,6 +37,7 @@ function get_frontend_status(fename) {
          table3.style.display = "none"
          table4.style.display = "none"
          table5.style.display = "none"
+         table6.style.display = "none"
 	 msg.style.display = "block"
       }
    });
@@ -296,7 +299,7 @@ do_refresh()
    </table>
    </div> <!-- 6 -->
    <div class="col-lg-9"> <!-- 6 -->
-   <table id="table5" class="table table-bordered">
+   <table id="table6" class="table table-bordered">
     <thead>
       <tr>
         <th>Temperature (°C)</th>
