@@ -91,7 +91,7 @@ INT interrupt_configure(INT cmd, INT source, POINTER_T adr);
 INT poll_event(INT source, INT count, BOOL test);
 INT read_event(char *pevent, INT off);
 INT read_data(char *pevent, INT off);
-INT read_monitor(char *pevent, INT off);
+INT read_envi(char *pevent, INT off);
 void read_dome_status(void);
 void enable_update(INT hDB, INT hkey, void *info);
 void power_update(INT hDB, INT hkey, void *info);
@@ -108,6 +108,7 @@ HNDLE enable_handle;
 HNDLE power_handle;
 HNDLE time_handle;
 HNDLE setup_handle;
+HNDLE envi_handle;
 
 struct {
    DWORD Channel[CHANNEL_NUM];
@@ -145,6 +146,12 @@ struct {
    BOOL autotrigger;
    BOOL clockout;
 } setup_settings;
+
+struct {
+   double temperature;
+   double relhumidity;
+   double pressure;
+} envi_settings;
 
 const char *frequency_config_str[] = {\
     "Channel = DWORD[19] :",\
@@ -267,6 +274,13 @@ const char *setup_config_str[] = {\
    NULL
 };
 
+const char *envi_config_str[] = {\
+   "Temperature = DOUBLE : 0",\
+   "Relative Humidity = DOUBLE : 0",\
+   "Pressure = DOUBLE : 0",\
+   NULL
+};
+
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
@@ -300,6 +314,21 @@ EQUIPMENT equipment[] = {
      1,                      /* log history */
      "", "", ""},
      read_data,              /* readout routine */
+     NULL, NULL, NULL, NULL,},
+  {"Dome%02d_envi",          /* equipment name */
+    {2, 2,                   /* event ID, trigger mask */
+     "SYSTEM",               /* event buffer */
+     EQ_PERIODIC,            /* equipment type */
+     0,                      /* event source (not used) */
+     "MIDAS",                /* format */
+     TRUE,                   /* enabled */
+     RO_ALWAYS | RO_ODB,     /* readout always */
+     5000,                   /* poll every period (ms) */
+     0,                      /* stop run after this event limit */
+     0,                      /* number of sub events */
+     1,                      /* log history */
+     "", "", ""},
+     read_envi,              /* readout routine */
      NULL, NULL, NULL, NULL,},
    {""}
 };
@@ -394,6 +423,7 @@ INT frontend_init()
 
    set_equipment_status(equipment[0].name, "Initializing...", "#FFFF00");
    set_equipment_status(equipment[1].name, "Initializing...", "#FFFF00");
+   set_equipment_status(equipment[2].name, "Initializing...", "#FFFF00");
  
    size = sizeof(state);
    status = db_get_value(hDB, 0, "Runinfo/State", &state, &size, TID_INT, TRUE);
@@ -616,8 +646,24 @@ INT frontend_init()
       return status;
    }
 
+   // Environment
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/", equipment[2].name);
+   status = db_create_record(hDB, 0, path, strcomb(envi_config_str));
+   status = db_find_key(hDB, 0, path, &envi_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, envi_handle, &envi_settings, sizeof(envi_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
+
    set_equipment_status(equipment[0].name, "Initialized", "#00ff00");
    set_equipment_status(equipment[1].name, "Initialized", "#00ff00");
+   set_equipment_status(equipment[2].name, "Initialized", "#00ff00");
 
    return SUCCESS;
 }
@@ -943,27 +989,45 @@ INT read_data(char *pevent, INT off) {
    return 0;
 }
 
-INT read_monitor(char *pevent, INT off) {
+INT read_envi(char *pevent, INT off) {
 
-   DWORD *pdata;
-   static int i=0;
-   static int j=1;
-   static int k=2;
+   FILE* f;
+   int vint;
+   double vdouble;
 
-   i++; j++; k++;
-   printf("%d \n", i);
+   f = fopen(TEMPERATURE_FILE, "r");
+   if(f) {
+      if(fscanf(f, "%d", &vint) < 0)
+         envi_settings.temperature = -1;
+      else 
+         envi_settings.temperature = vint / 1000.0;
+      //printf("TEMP: %lf ", envi_settings.temperature);
+   }
+   fclose(f);
 
-   /* init bank structure */
-   bk_init(pevent);
+   f = fopen(RELHUMIDITY_FILE, "r");
+   if(f) {
+      if(fscanf(f, "%d", &vint) < 0)
+         envi_settings.relhumidity = -1;
+      else
+         envi_settings.relhumidity = vint / 1000.0;
+      //printf("RH: %lf ", envi_settings.relhumidity);
+   }
+   fclose(f);
 
-   bk_create(pevent, "ENV", TID_DWORD, (void **)&pdata);  
-   *pdata++ = i;
-   *pdata++ = j;
-   *pdata++ = k;
+   f = fopen(PRESSURE_FILE, "r");
+   if(f) {
+      if(fscanf(f, "%lf", &vdouble) < 0)
+         envi_settings.pressure = -1; 
+      else
+         envi_settings.pressure = vdouble; 
+      //printf("PRESS: %lf", envi_settings.pressure);
+   }
+   fclose(f);
 
-   bk_close(pevent, pdata);
+   //printf("\n");
 
-   return bk_size(pevent);
+   return 0;
 }
 
 /*
