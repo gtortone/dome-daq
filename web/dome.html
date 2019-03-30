@@ -54,6 +54,8 @@ do_refresh()
    <title>Dome Run Control</title>
 
    <style>
+      .table td  { text-align: center; vertical-align: middle; }
+      .table th  { text-align: center; vertical-align: middle; }
       .mtable td { padding: 10px; }
    </style>
 </head>
@@ -75,79 +77,80 @@ do_refresh()
    <table id="table1" class="table table-bordered">
       <thead>
       <tr>
-         <th style="width: 100px; height: 20px;"> Channel </th>
-         <th style="width: 100px;"> Frequency </th>
-         <th style="width: 100px;"> Overcurrent </th>
-         <th style="width: 100px;"> ADC enable </th>
-         <th style="width: 100px;"> Power enable </th>
+         <th style="width: 100px; height: 20px; text-align: center;"> Channel </th>
+         <th style="width: 100px; text-align: center;"> Frequency </th>
+         <th style="width: 100px; text-align: center;"> Overcurrent </th>
+         <th style="width: 100px; text-align: center;"> ADC enable </th>
+         <th style="width: 100px; text-align: center;"> Power enable </th>
+      </tr>
       </thead>
       <tr>
 	 <td style="height: 10px;">CH 00</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[0]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[0]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[0]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[0]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[0]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 01</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[1]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[1]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[1]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[1]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[1]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 02</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[2]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[2]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[2]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[2]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[2]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 03</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[3]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[3]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[3]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[3]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[3]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 04</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[4]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[4]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[4]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[4]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[4]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 05</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[5]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[5]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[5]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[5]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[5]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 06</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[6]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[6]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[6]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[6]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[6]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 07</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[7]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[7]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[7]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[7]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[7]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 08</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[8]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[8]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[8]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[8]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[8]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 09</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[9]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[9]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[9]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[9]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[9]"></input></td>
       </tr>
@@ -197,72 +200,73 @@ do_refresh()
    <table id="table4" class="table table-bordered">
       <thead>
       <tr>
-         <th style="width: 100px; height: 20px;"> Channel </th>
-         <th style="width: 100px;"> Frequency </th>
-         <th style="width: 100px;"> Overcurrent </th>
-         <th style="width: 100px;"> ADC enable </th>
-         <th style="width: 100px;"> Power enable </th>
+         <th style="width: 100px; height: 20px; text-align: center;"> Channel </th>
+         <th style="width: 100px; text-align: center;"> Frequency </th>
+         <th style="width: 100px; text-align: center;"> Overcurrent </th>
+         <th style="width: 100px; text-align: center;"> ADC enable </th>
+         <th style="width: 100px; text-align: center;"> Power enable </th>
+      </tr>
       </thead>
       <tr>
 	 <td style="height: 10px;">CH 10</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[10]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[10]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[10]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[10]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[10]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 11</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[11]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[11]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[11]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[11]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[11]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 12</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[12]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[12]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[12]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[12]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[12]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 13</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[13]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[13]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[13]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[13]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[13]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 14</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[14]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[14]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[14]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[14]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[14]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 15</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[15]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[15]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[15]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[15]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[15]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 16</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[16]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[16]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[16]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[16]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[16]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 17</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[17]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[17]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[17]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[17]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[17]"></input></td>
       </tr>
       <tr>
 	 <td style="height: 10px;">CH 18</td>
 	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Frequency/Channel[18]"></div></td>
-	 <td><div name="modbbox" style="width: 10px; height: 10px;" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[18]" data-color="red" data-background-color="lightgreen"></div></td>
+	 <td><div name="modbvalue" data-odb-path="/Equipment/Dome01_data/Settings/Overcurrent/Channel[18]"></div></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Enable/Channel[18]"></input></td>
 	 <td><input type="checkbox" name="modbcheckbox" data-odb-path="/Equipment/Dome01_data/Settings/Power/Channel[18]"></input></td>
       </tr>
@@ -291,6 +295,24 @@ do_refresh()
     </tbody>
    </table>
    </div> <!-- 6 -->
+   <div class="col-lg-9"> <!-- 6 -->
+   <table id="table5" class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Temperature (°C)</th>
+        <th>Relative Humidity (%RH)</th>
+        <th>Pressure (kPa)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td align="right"><div name="modbvalue" data-odb-path="/Equipment/Dome01_envi/Settings/Temperature"></td>
+        <td align="right"><div name="modbvalue" data-odb-path="/Equipment/Dome01_envi/Settings/Relative Humidity"></td>
+        <td align="right"><div name="modbvalue" data-odb-path="/Equipment/Dome01_envi/Settings/Pressure"></td>
+      </tr>
+    </tbody>
+   </table>
+   </div> <!-- 6 --> 
    </div> <!-- 5 -->
    </div> <!-- 4 -->
    </div> <!-- 3 -->
