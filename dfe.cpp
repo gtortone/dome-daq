@@ -65,7 +65,7 @@ INT max_event_size_frag = 5 * 1024 * 1024;
 INT max_event_size = 16000;
 
 /* ring buffer size to hold events */
-INT event_buffer_size = 1600000;	// 1.6 Megabytes
+INT event_buffer_size = 32000000;	// 32 Megabytes
 
 /* ring buffer handler for events */
 int rb_handle;
@@ -109,6 +109,7 @@ HNDLE power_handle;
 HNDLE time_handle;
 HNDLE setup_handle;
 HNDLE envi_handle;
+HNDLE rbl_handle;
 
 struct {
    DWORD Channel[CHANNEL_NUM];
@@ -152,6 +153,10 @@ struct {
    double relhumidity;
    double pressure;
 } envi_settings;
+
+struct {
+   INT level;
+} rb_settings;
 
 const char *frequency_config_str[] = {\
     "Channel = DWORD[19] :",\
@@ -281,6 +286,11 @@ const char *envi_config_str[] = {\
    NULL
 };
 
+const char *rb_config_str[] = {\
+   "Buffer level = INT : 0",\
+   NULL
+};
+
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
@@ -342,11 +352,10 @@ EQUIPMENT equipment[] = {
 void cb_daq_in(struct libusb_transfer *transfer)
 {
    void *wp;
-   int nb;
-
-   rb_get_buffer_level(rb_handle, &nb);
 
 #ifdef DEBUG   
+   int nb;
+   rb_get_buffer_level(rb_handle, &nb);
    printf("callback: status = %d - length: %d / rb: level %d / %.2f%%\n", transfer->status, transfer->actual_length, nb, (float)nb/(float)event_buffer_size*100);
 #endif
 
@@ -386,10 +395,11 @@ void cb_daq_in(struct libusb_transfer *transfer)
 	    for(int i=0; i<buflen; i++)
 	       printf("%X ", bufusint[i]);
 #endif
-
-	    // submit the next transfer
-   	    libusb_submit_transfer(transfer_daq_in);
          }
+
+	 // submit the next transfer
+   	 libusb_submit_transfer(transfer_daq_in);
+
       }	// end if(running)
    }
 }
@@ -497,6 +507,21 @@ INT frontend_init()
 
    // read actual run control parameters... 
    read_dome_status();
+
+   // Buffer level
+   snprintf(path, sizeof(path), "/Equipment/%s/Settings/", equipment[0].name);
+   status = db_create_record(hDB, 0, path, strcomb(rb_config_str));
+   status = db_find_key(hDB, 0, path, &rbl_handle);
+   if (status != DB_SUCCESS) {
+      cm_msg(MINFO,"dfe","Key %s not found. Return code: %d", path, status);
+   }
+
+   status = db_open_record(hDB, rbl_handle, &rb_settings, sizeof(rb_settings), MODE_WRITE, NULL, NULL);
+   if (status != DB_SUCCESS){
+      printf("Couldn't create hotlink for %s. Return code: %d", path, status);
+      cm_msg(MERROR,"dfe","Couldn't create hotlink for %s. Return code: %d", path, status);
+      return status;
+   }
 
    // Frequency
    snprintf(path, sizeof(path), "/Equipment/%s/Settings/Frequency/", equipment[1].name);
@@ -942,6 +967,12 @@ INT read_data(char *pevent, INT off) {
    bool retval = false;
    uint16_t value;
    int i = 0;
+   int nb = 0;
+
+   /* Buffer level */
+   rb_get_buffer_level(rb_handle, &nb);
+   rb_settings.level = (float)nb/(float)event_buffer_size*100; 
+   //printf("rb level %d / %.2f%%\n", nb, (float)nb/(float)event_buffer_size*100);
 
    /* Frequency */
    for(int addr=FREQ_REG_OFFSET; addr<CHANNEL_NUM; addr++) {
