@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctime>
 #include <libusb-1.0/libusb.h>
 
 #include "midas.h"
@@ -932,6 +933,10 @@ INT read_event(char *pevent, INT off) {
          
          /* init bank structure */
          bk_init(pevent);
+
+	 bk_create(pevent, "TS", TID_DWORD, (void **)&pdata);
+	 *pdata++ = (unsigned) std::time(NULL);
+	 bk_close(pevent, pdata);
 
          bk_create(pevent, "CHAN", TID_DWORD, (void **)&pdata);
          *pdata++ = channel;
