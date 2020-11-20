@@ -123,6 +123,7 @@ struct {
 struct {
    DWORD pps;
    DWORD oop;
+   DWORD dead_time;
 } counters_settings;
 
 struct {
@@ -210,6 +211,7 @@ const char *overcurrent_config_str[] = {\
 const char *counters_config_str[] = {\
    "PPS counter = DWORD : 0",\
    "OOP counter = DWORD : 0",\
+   "Dead time = DWORD : 0",\
    NULL
 };
 
@@ -1001,14 +1003,17 @@ INT read_data(char *pevent, INT off) {
    for(i=16; i<CHANNEL_NUM; i++)
       overcurrent_settings.Channel[i] = GETBIT(value, (i-16))==0?true:false;
  
-   /* PPS and OOP counters */
+   /* PPS, OOP counters and dead time*/
    pthread_mutex_lock(&mutex);
-      retval = RChandle.read_reg(0x1C, value);
+      retval = RChandle.read_reg(0x30, value);
       if(retval)
          counters_settings.pps = value;
-      retval = RChandle.read_reg(0x1D, value);
+      retval = RChandle.read_reg(0x31, value);
       if(retval)
          counters_settings.oop = value;
+      retval = RChandle.read_reg(0x1C, value);
+      if(retval)
+         counters_settings.dead_time = (100 - (float)value/488.29);
    pthread_mutex_unlock(&mutex);
 
    /* PLL flags */
